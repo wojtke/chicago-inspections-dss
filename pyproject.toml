@@ -1,0 +1,26 @@
+[project]
+name = "inspections"
+version = "0.1.0"
+description = "Decision support for Chicago food inspections: a risk model and an inspection schedule, backtested on city open data"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "pandas>=2.2",
+    "pyarrow>=17",
+    "scikit-learn>=1.6",
+    "streamlit>=1.40",
+]
+
+[project.scripts]
+insp = "inspections.cli:main"
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

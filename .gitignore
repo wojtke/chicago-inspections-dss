@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.DS_Store
+
+# Downloaded data and trained models are re-created by `insp data` / `insp train`.
+data/*
+models/*
