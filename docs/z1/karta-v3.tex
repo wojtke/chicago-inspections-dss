@@ -1,0 +1,375 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[polish]{babel}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage[a4paper,margin=2.5cm]{geometry}
+\usepackage{parskip}
+\usepackage{graphicx}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{enumitem}
+\usepackage[font=small,labelfont=bf]{caption}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning}
+\usepackage{float}
+\usepackage{hyperref}
+
+\input{../tech-report/data/numbers.tex}
+
+\newcommand{\coursename}{Systemy wspomagania decyzji}
+\newcommand{\projecttitle}{Planowanie kontroli sanitarnych w~Chicago}
+\newcommand{\projectsubtitle}{Zadanie 1: Karta problemu decyzyjnego}
+\newcommand{\authorone}{Wojciech Jasiński}
+\newcommand{\authortwo}{Piotr Iśtok}
+\newcommand{\lecturer}{dr inż. Grzegorz Kunikowski}
+\newcommand{\projectdate}{Warszawa, 2026}
+
+\setlist{itemsep=0.15em, parsep=0pt, topsep=0.3em, partopsep=0pt}
+\setlength{\parskip}{0.5em plus 0.1em}
+\captionsetup[table]{skip=4pt}
+\setlength{\intextsep}{8pt plus 2pt minus 2pt}
+\renewcommand{\arraystretch}{1.2}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+
+\makeatletter
+\newcommand{\needspace}[1]{\par\begingroup\setlength{\dimen@}{#1}\vskip\z@\@plus\dimen@\penalty -100\vskip\z@\@plus -\dimen@\vskip\dimen@\penalty 9999\vskip -\dimen@\vskip\z@skip\endgroup}
+\makeatother
+
+\definecolor{navy}{HTML}{1F4E79}
+\definecolor{accent}{HTML}{C9731E}
+\hypersetup{colorlinks, linkcolor=navy, urlcolor=navy, citecolor=navy}
+
+\begin{document}
+
+\begin{titlepage}
+  \centering
+  \includegraphics[width=0.75\textwidth]{../tech-report/politechnika.png}\par
+  \vspace{2.5cm}
+  {\large \coursename\par}
+  \vspace{1.5cm}
+  {\LARGE\bfseries \projecttitle\par}
+  \vspace{0.5cm}
+  {\Large \projectsubtitle\par}
+  \vspace{2.5cm}
+  {\large Autorzy\par}
+  \vspace{0.3cm}
+  {\large \authorone\par}
+  \vspace{0.1cm}
+  {\large \authortwo\par}
+  \vspace{1cm}
+  {\large Prowadzący\par}
+  \vspace{0.3cm}
+  {\large \lecturer\par}
+  \vfill
+  {\large \projectdate\par}
+\end{titlepage}
+
+% =============================================================================================
+\section{Decyzja i decydent}
+
+Departament Zdrowia Publicznego Chicago kontroluje lokale gastronomiczne: restauracje, sklepy,
+stołówki szkolne, kuchnie szpitali i domów opieki. W otwartych danych miasta z lat
+\FirstYear--2026 jest \NInspections{} kontroli \NPlaces{} lokali~\cite{foodinsp}. Prawie połowa
+kontroli (\MandatoryShare\% w latach 2025--2026) to wizyty obowiązkowe: po skargach, przy
+wydaniu licencji i kontrole ponowne. Na kontrole rutynowe zostaje około \RoutinePerDay{} wizyt
+dziennie, a lokali z zaległą kontrolą rutynową jest kilka tysięcy. Każdego dnia trzeba więc
+wybrać, które z nich odwiedzić najpierw.
+
+Miasto od 2015 roku szereguje lokale według ryzyka modelem uczenia maszynowego; w teście
+z 2014 roku pozwolił on wykrywać naruszenia krytyczne średnio o 7,5 dnia wcześniej~\cite{cityeval}.
+Model wskazuje jednak tylko, gdzie ryzyko jest największe. Nie uwzględnia skutków naruszenia
+dla klientów, wizyt obowiązkowych, dostępnych inspektorów ani dojazdów, a bez nich nie da się
+ułożyć planu dnia.
+
+\textbf{Pytanie decyzyjne:} \emph{które lokale skontrolować danego dnia, kto je odwiedzi
+i w jakiej kolejności, aby jak najwcześniej wykryć lokale z poważnymi uchybieniami przy
+dostępnym zespole i po wykonaniu wizyt obowiązkowych?}
+
+\textbf{Cel:} jak najwcześniejsze wykrywanie lokali, które nie przechodzą kontroli, zwłaszcza
+tych, w których jedzą dzieci i osoby chore, przy wykonaniu wizyt obowiązkowych, rozsądnym czasie
+dojazdów i równym traktowaniu dzielnic.
+
+Decydentem jest \textbf{kierownik zespołu inspektorów}: codziennie ustala plan i za niego
+odpowiada. System przygotowuje propozycję planu, którą kierownik może zmienić, zanim ją
+zatwierdzi. Pozostałe role zestawia tabela~\ref{tab:roles}.
+
+\begin{table}[H]
+\centering\small
+\caption{Interesariusze decyzji.}
+\label{tab:roles}
+\begin{tabularx}{\textwidth}{@{}L{3.6cm}L{4.6cm}Y@{}}
+\toprule
+Interesariusz & Rola & Oczekiwania \\
+\midrule
+Kierownik zespołu & Decydent: ustala i zatwierdza plan & Plan dobrze wykorzystujący zespół,
+  który da się uzasadnić \\
+Inspektorzy & Wykonują plan i wpisują wyniki & Realistyczne trasy, równe obciążenie \\
+Kierownictwo departamentu & Ustala liczbę etatów i zasady kontroli & Mierzalna poprawa
+  ochrony zdrowia \\
+Mieszkańcy i klienci lokali & Ponoszą skutki opóźnień & Szybkie wykrywanie zagrożeń \\
+Właściciele lokali & Podmioty kontrolowane & Przewidywalne, niedyskryminujące traktowanie \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Główne napięcie dotyczy skuteczności i sprawiedliwości: kontrole powinny trafiać tam, gdzie
+ryzyko jest największe, ale nie mogą nieproporcjonalnie obciążać niektórych dzielnic.
+
+\textbf{Zakres i ograniczenia.} Decyzja dotyczy planu jednego dnia: wyboru lokali, przydziału
+do inspektorów i kolejności wizyt. Nie obejmuje przebiegu kontroli, sankcji ani liczby etatów.
+Plan musi uwzględniać:
+\begin{itemize}
+  \item liczbę inspektorów obecnych danego dnia;
+  \item czas pracy inspektora: do 6 wizyt i 8 godzin łącznie z dojazdami;
+  \item pierwszeństwo wizyt obowiązkowych;
+  \item częstotliwość kontroli zależną od kategorii ryzyka lokalu;
+  \item zakaz używania cech dyskryminujących i obowiązek uzasadnienia każdej wizyty;
+  \item to, że ostateczną decyzję podejmuje człowiek.
+\end{itemize}
+
+\textbf{Charakter problemu.} Decyzja jest operacyjna i powtarzana codziennie, częściowo
+ustrukturyzowana i podejmowana w warunkach ryzyka: wynik kontroli nie jest znany przed wizytą,
+ale można oszacować jego prawdopodobieństwo. Jest wielokryterialna i wymaga optymalizacji przy
+ograniczeniach. Odpowiada jej hybrydowy system wspomagania decyzji: model uczony na danych
+historycznych, metoda AHP do wyrażenia preferencji i optymalizacja planu, którego wynik
+zatwierdza człowiek.
+
+% =============================================================================================
+\section{Uzasadnienie}
+
+\textbf{Wartość dla użytkownika.} Kierownik nie musi ręcznie przeglądać tysięcy zaległych
+lokali. Dostaje propozycję planu dla całego zespołu z uzasadnieniem każdej wizyty i mapą tras,
+a inspektor widzi swoją trasę na dany dzień.
+
+\textbf{Uzasadnienie biznesowe.} Liczba inspektorów jest stała, więc poprawa może wynikać
+tylko z lepszej kolejności wizyt i krótszych dojazdów. Wcześniejsze wykrycie uchybień zmniejsza
+ryzyko ognisk zatruć, a z nimi kosztów leczenia i dochodzeń epidemiologicznych. W symulacji na danych z lat 2025--2026
+plan systemu wykrywał lokale z wynikiem negatywnym średnio o \DaysSys{} dnia wcześniej niż
+kolejność stosowana przez miasto, a placówki dla dzieci i opieki zdrowotnej o \DaysHiSys{} dnia
+wcześniej. Wynik dotyczy danych historycznych i wymaga potwierdzenia w praktyce.
+
+\textbf{Inne uzasadnienie.} Ochrona zdrowia publicznego, przejrzystość decyzji urzędu
+i równe traktowanie mieszkańców różnych dzielnic.
+
+% =============================================================================================
+\section{Warianty decyzji}
+
+Dopuszczalnych planów dnia jest zbyt wiele, by porównywać je pojedynczo. Porównujemy więc
+reguły, według których plan powstaje (tabela~\ref{tab:variants}). Przy każdej z nich kierownik
+może dodać lub pominąć lokal, zmienić skład zespołu i wagi kryteriów.
+
+\begin{table}[H]
+\centering\small
+\caption{Porównywane warianty.}
+\label{tab:variants}
+\begin{tabularx}{\textwidth}{@{}L{4.2cm}Y@{}}
+\toprule
+Wariant & Opis \\
+\midrule
+W0 Kolejność miasta & Kolejność, w jakiej miasto faktycznie kontrolowało lokale (stan
+  obecny) \\
+W1 Kolejność losowa & Punkt kontrolny dla metody oceny \\
+W2 Tylko ryzyko & Najpierw lokale o najwyższym przewidywanym ryzyku \\
+W3 Ryzyko i skutki & Priorytet łączący ryzyko, wrażliwość klientów i zaległość kontroli \\
+W4 Pełny system & W3 z równoważeniem dzielnic i trasami inspektorów; wizyty obowiązkowe
+  najpierw \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% =============================================================================================
+\section{Kryteria i preferencje}
+
+Kryteria działają na dwóch poziomach (tabela~\ref{tab:criteria}). Pierwsze trzy ustalają
+kolejność lokali w planie. Pozostałe służą do oceny całego planu i porównania wariantów.
+
+Preferencje decydenta wyrażamy metodą AHP~\cite{saaty}. Kierownik porównuje parami kryteria
+wyboru lokalu, a z porównań wynikają ich wagi oraz współczynnik zgodności, który ostrzega
+o sprzecznych ocenach. Tą samą metodą ustalamy wagi typów lokali. Domyślnie największą wagę ma
+ryzyko, mniejszą wrażliwość klientów, a najmniejszą zaległość; kierownik może je zmienić.
+
+\textbf{Przykład ilustracyjny.} W planie zostało jedno miejsce, a do wyboru są bar szybkiej
+obsługi z ryzykiem 0,40 i stołówka szpitalna z ryzykiem 0,25. Sama predykcja wskazałaby bar.
+Po uwzględnieniu wrażliwości klientów wyżej trafia stołówka, bo uchybienia zagrażają tam
+osłabionym pacjentom.
+
+\begin{table}[H]
+\centering\small
+\caption{Kryteria, ich kierunek i pomiar.}
+\label{tab:criteria}
+\begin{tabularx}{\textwidth}{@{}L{4.2cm}L{1.9cm}Y@{}}
+\toprule
+Kryterium & Kierunek & Pomiar \\
+\midrule
+\multicolumn{3}{@{}l}{\textit{Wybór lokalu}} \\
+Ryzyko wyniku negatywnego & max & Prawdopodobieństwo z modelu predykcyjnego \\
+Wrażliwość klientów & max & Waga typu lokalu (np. szkoła, szpital, restauracja) \\
+Zaległość kontroli & max & Czas od terminu wynikającego z kategorii ryzyka \\
+\midrule
+\multicolumn{3}{@{}l}{\textit{Ocena planu}} \\
+Szybkość wykrycia & max & O ile dni wcześniej niż w W0 znaleziono lokale z wynikiem
+  negatywnym \\
+Dojazdy & min & Kilometry dojazdu na wizytę \\
+Równe traktowanie dzielnic & min odchylenia & Udział wczesnych wizyt w grupach dzielnic
+  według dochodu wobec ich udziału w wynikach negatywnych \\
+Wizyty obowiązkowe & warunek & Wykonane wszystkie, które mieszczą się w dniu \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% =============================================================================================
+\section{Dane i niepewność}
+
+Korzystamy wyłącznie z otwartych danych miasta Chicago. Główne źródło to rejestr kontroli
+sanitarnych~\cite{foodinsp}: dla każdej kontroli zawiera lokal, jego typ i kategorię ryzyka,
+adres i współrzędne, datę, rodzaj i wynik kontroli oraz opis naruszeń. Uzupełniają go granice
+dzielnic~\cite{areas} i dochód ich mieszkańców~\cite{socio}, używany wyłącznie do sprawdzania
+równego traktowania. W działającym systemie dochodzą wyniki wpisywane przez inspektorów.
+
+Najważniejsze źródła niepewności i sposób ich uwzględnienia:
+\begin{itemize}
+  \item \textbf{Wynik kontroli} nie jest znany przed wizytą. Model podaje tylko
+        prawdopodobieństwo i ma umiarkowaną trafność (AUC~\AucTestGB), dlatego ryzyko jest
+        jednym z kilku kryteriów, a plan zatwierdza człowiek.
+  \item \textbf{Zgłoszenia i nieobecności} nie są znane z wyprzedzeniem, więc plan powstaje
+        na nowo każdego dnia.
+  \item \textbf{Dostępność lokalu}: lokal bywa zamknięty lub zlikwidowany. Nieudana wizyta
+        nie zamyka zgłoszenia.
+  \item \textbf{Dane}: wyniki znamy tylko dla lokali, które skontrolowano, a czasy dojazdu są
+        przybliżone.
+\end{itemize}
+
+Koszty błędów są nierówne. Pominięcie lokalu z poważnymi uchybieniami może skończyć się
+zatruciem klientów, a zbędna kontrola kosztuje tylko czas inspektora. Plan nie odrzuca więc
+lokali progiem klasyfikatora, tylko układa je według priorytetu.
+
+\textbf{Przykład.} Wśród 10\% lokali uznanych przez model za najbardziej ryzykowne wynik
+negatywny miało \TopTestCal\% wobec \AllTestCal\% w całej próbie. Model dobrze wskazuje, gdzie
+szukać, ale około dwie trzecie wskazanych lokali kontrolę przechodzi.
+
+% =============================================================================================
+\needspace{9cm}
+\section{Szkic rozwiązania}
+
+System składa się z pięciu modułów, a decyzję podejmuje człowiek (rys.~\ref{fig:arch}).
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  box/.style={draw=navy, fill=navy!6, rounded corners=2pt, align=center, font=\footnotesize,
+              minimum height=1.2cm, text width=2.05cm, inner sep=3pt},
+  hum/.style={draw=accent, fill=accent!10, rounded corners=2pt, align=center, font=\footnotesize,
+              minimum height=1.0cm, text width=2.6cm, inner sep=3pt},
+  arr/.style={-{Stealth[length=2mm]}, navy, thick},
+  harr/.style={-{Stealth[length=2mm]}, accent, thick},
+  lab/.style={font=\scriptsize, text=black!70, align=center},
+  node distance=0.62cm]
+  \node[box] (data) {\textbf{Dane}\\historia kontroli};
+  \node[box, right=of data] (pred) {\textbf{Predykcja}\\ryzyko lokalu};
+  \node[box, right=of pred] (pref) {\textbf{Preferencje}\\priorytet (AHP)};
+  \node[box, right=of pref] (dec) {\textbf{Decyzja}\\plan dnia\\i trasy};
+  \node[box, right=of dec] (db) {\textbf{Baza}\\plany i wyniki};
+  \node[hum, below=1.3cm of pref] (mgr) {\textbf{Kierownik}\\zmienia\\i zatwierdza plan};
+  \node[hum, below=1.3cm of db] (insp) {\textbf{Inspektorzy}\\wykonują wizyty};
+  \node[hum, below=1.3cm of data] (city) {\textbf{Dane miasta}};
+  \draw[arr] (city) -- (data);
+  \draw[arr] (data) -- (pred);
+  \draw[arr] (pred) -- (pref);
+  \draw[arr] (pref) -- (dec);
+  \draw[arr] (dec) -- (db);
+  \draw[harr] (mgr) -- node[lab, left, pos=0.45] {wagi} (pref);
+  \draw[harr] (mgr.east) -| node[lab, left, pos=0.75] {zmiany,\\zatwierdzenie} (dec.south);
+  \draw[harr] (db.south) ++(-0.4,0) -- node[lab, left] {trasa} ([xshift=-4mm]insp.north);
+  \draw[harr] ([xshift=4mm]insp.north) -- node[lab, right] {wynik} ([xshift=0.4cm]db.south);
+  \draw[arr, rounded corners=4pt] (db.north) -- ++(0,0.5) -| node[lab, above, pos=0.25]
+    {wyniki wizyt uzupełniają historię lokali} (data.north);
+\end{tikzpicture}
+\caption{Moduły systemu (granatowe), ludzie i źródło danych (pomarańczowe) oraz przepływ
+danych.}
+\label{fig:arch}
+\end{figure}
+
+Jeden dzień pracy systemu przebiega następująco:
+\begin{enumerate}
+  \item Moduł danych pobiera dane miasta, ujednolica je i dopisuje wyniki wpisane w systemie.
+  \item Moduł predykcyjny szacuje ryzyko każdego lokalu z historii sprzed danego dnia.
+  \item Moduł preferencji łączy ryzyko z wrażliwością klientów i zaległością w priorytet lokalu.
+  \item Moduł decyzyjny układa plan: najpierw wizyty obowiązkowe, potem lokale o najwyższym
+        priorytecie, rozdzielone na trasy inspektorów.
+  \item Kierownik przegląda plan wraz z uzasadnieniem wizyt, poprawia go i zatwierdza.
+  \item Inspektorzy wykonują wizyty i wpisują wyniki, które zasilają kolejne plany.
+\end{enumerate}
+
+% =============================================================================================
+\section{Założenia przygotowania prototypu}
+
+Prototyp to aplikacja przeglądarkowa z dwiema rolami: kierownika, który przegląda
+i zatwierdza plan dnia, oraz inspektora, który widzi swoją trasę i wpisuje wyniki. Działa
+w trybie demonstracyjnym: wybiera się dzień z przeszłości, a system układa plan tak, jakby
+działał w tamtym czasie.
+\begin{itemize}
+  \item \textbf{Na prawdziwych danych:} model, priorytety, układanie planu i ocena wariantów.
+  \item \textbf{Uproszczone:} czasy wizyt i dojazdów; wagi AHP ustala zespół, nie eksperci.
+  \item \textbf{Fikcyjne:} zespół inspektorów i wpisywane wyniki. Zgłoszenia danego dnia to
+        kontrole obowiązkowe, które miasto wtedy wykonało.
+\end{itemize}
+
+\textbf{Założenia i ich weryfikacja} zestawia tabela~\ref{tab:assumptions}.
+
+\begin{table}[H]
+\centering\small
+\caption{Założenia i ich krytyczna weryfikacja.}
+\label{tab:assumptions}
+\begin{tabularx}{\textwidth}{@{}L{4.6cm}Y@{}}
+\toprule
+Założenie & Weryfikacja i ryzyko \\
+\midrule
+Model jest wystarczająco trafny & AUC \AucTestGB{} na danych z lat 2025--2026, nieużywanych do
+  uczenia; trafność umiarkowana, więc model tylko wspiera decyzję. \\
+Symulacja jest uczciwą oceną & Kolejność losowa daje wynik bliski zera; symulacja obejmuje
+  jednak tylko kontrole, które się odbyły. \\
+Model nie dyskryminuje dzielnic & Sprawdzone w grupach dzielnic według dochodu; współrzędne
+  lokali usunięto z modelu. \\
+Częstotliwość kontroli & Okresy pół roku, rok i dwa lata wymagają potwierdzenia w przepisach
+  miasta. \\
+Czas wizyty i dojazdu & 45 minut na wizytę i dojazd po siatce ulic to przybliżenia. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\textbf{Organizacja pracy.} Piotr Iśtok: moduł predykcyjny, ocena wariantów i analiza
+równego traktowania dzielnic. Wojciech Jasiński: moduł decyzyjny, architektura i aplikacja.
+
+% =============================================================================================
+\section{Wykorzystanie GenAI i odpowiedzialność zespołu}
+
+% DO SPRAWDZENIA PRZEZ ZESPÓŁ przed oddaniem.
+Przy przygotowaniu tej karty i wcześniejszej prezentacji projektu korzystaliśmy z asystenta
+opartego na dużym modelu językowym (Claude, Anthropic). Pomagał w redakcji tekstu,
+porządkowaniu struktury dokumentu i sprawdzaniu jego spójności. Wszystkie treści przejrzeliśmy,
+a podane liczby sprawdziliśmy w danych źródłowych.
+
+Samodzielnie określiliśmy temat i zakres projektu, problem decyzyjny i decydenta, warianty,
+kryteria oraz założenia. Za treść dokumentu odpowiada zespół.
+
+\begingroup\small\raggedright
+\begin{thebibliography}{9}
+\bibitem{foodinsp} City of Chicago, \textit{Food Inspections}, Chicago Data Portal,
+  \url{https://data.cityofchicago.org/d/4ijn-s7e5}.
+\bibitem{areas} City of Chicago, \textit{Boundaries -- Community Areas},
+  \url{https://data.cityofchicago.org/d/igwz-8jzy}.
+\bibitem{socio} City of Chicago, \textit{Census Data -- Selected socioeconomic indicators,
+  2008--2012}, \url{https://data.cityofchicago.org/d/kn9c-c2s2}.
+\bibitem{cityeval} City of Chicago, \textit{Food Inspections Evaluation},
+  \url{https://github.com/Chicago/food-inspections-evaluation}.
+\bibitem{saaty} T. L. Saaty, \textit{The Analytic Hierarchy Process}, McGraw-Hill, 1980.
+\end{thebibliography}
+\endgroup
+
+\end{document}
