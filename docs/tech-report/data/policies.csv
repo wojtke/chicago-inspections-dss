@@ -1,0 +1,7 @@
+policy,name,days_sooner,high_impact_days_sooner,fails_first_half,km_per_visit
+actual,Kolejność faktyczna,0.0,0.0,48.0,3.1
+random,Losowa,0.3,0.4,49.0,3.4
+risk,Tylko ryzyko,6.5,5.8,63.0,3.3
+ahp,Ryzyko + AHP,4.9,23.7,60.0,3.2
+ahp_fair,AHP + równoważenie,5.0,22.7,61.0,3.3
+system,Pełny system (+ trasy),5.0,23.7,60.0,1.7

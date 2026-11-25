@@ -1,0 +1,30 @@
+[theme]
+base = "light"
+primaryColor = "#1F4E79"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F2F4F7"
+textColor = "#1B2430"
+borderColor = "#DCE1E8"
+showWidgetBorder = true
+blueColor = "#1F4E79"
+orangeColor = "#C9731E"
+greenColor = "#2E7D4F"
+redColor = "#B42318"
+grayColor = "#667085"
+linkColor = "#1F4E79"
+font = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap, sans-serif"
+headingFontWeights = [650, 600, 600, 600, 600, 600]
+headingFontSizes = ["2rem", "1.5rem", "1.2rem", "1.05rem", "1rem", "0.9rem"]
+baseRadius = "0.4rem"
+showSidebarBorder = true
+chartCategoricalColors = ["#1F4E79", "#C9731E", "#4C8C6B", "#8C5E9E", "#5FA8C8", "#B8574B", "#8A939E", "#D4A72C"]
+
+[theme.sidebar]
+backgroundColor = "#F7F8FA"
+secondaryBackgroundColor = "#ECEFF3"
+
+[client]
+toolbarMode = "minimal"
+
+[browser]
+gatherUsageStats = false

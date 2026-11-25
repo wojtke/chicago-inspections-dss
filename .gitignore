@@ -7,3 +7,11 @@ __pycache__/
 # Downloaded data and trained models are re-created by `insp data` / `insp train`.
 data/*
 models/*
+# Replay results (`insp evaluate`) and the running app's local database (users, plans, results).
+results/*
+var/*
+
+# LaTeX build files of the technical report.
+docs/tech-report/*.aux
+docs/tech-report/*.log
+docs/tech-report/*.out

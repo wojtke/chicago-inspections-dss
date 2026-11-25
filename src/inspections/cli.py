@@ -1,27 +1,46 @@
-"""Command line: insp data | train | backtest."""
+"""Command line: insp data | train | evaluate | plan | users | demo  (city from --city or $INSP_CITY)."""
 import argparse
-
-from . import data, model, schedule
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(prog="insp", description=__doc__)
-    sub = parser.add_subparsers(dest="cmd", required=True)
-    p = sub.add_parser("data", help="download the city export and write data/inspections.parquet")
-    p.add_argument("--force", action="store_true", help="download again even if the CSV is there")
-    sub.add_parser("train", help="train the risk model on 2015-2023, report 2024 and 2025-26")
-    p = sub.add_parser("backtest", help="replay a window of past inspections in a different order")
-    p.add_argument("--start", default="2025-09-01")
-    p.add_argument("--days", type=int, default=60)
-    args = parser.parse_args()
+    ap = argparse.ArgumentParser(prog="insp", description="Inspection planning DSS")
+    ap.add_argument("--city", default=None, help="city slug (default: $INSP_CITY or chicago)")
+    sub = ap.add_subparsers(dest="cmd", required=True)
+    d = sub.add_parser("data", help="download and clean the city's open data")
+    d.add_argument("--force", action="store_true", help="download again")
+    sub.add_parser("train", help="train, calibrate and audit the risk model")
+    ev = sub.add_parser("evaluate", help="replay past windows for every policy and scenario")
+    ev.add_argument("--quick", action="store_true", help="one window, capacity x1 only")
+    pl = sub.add_parser("plan", help="print the routine plan for one day")
+    pl.add_argument("--date", required=True)
+    pl.add_argument("--out", default=None, help="write the plan to this CSV")
+    sub.add_parser("users", help="create the demo team (a manager and 13 inspectors)")
+    dm = sub.add_parser("demo", help="reset the app's database to a lived-in demo: team, plans and results")
+    dm.add_argument("--days", type=int, default=8, help="working days of approved plans (default 8)")
+    args = ap.parse_args()
 
+    from .city import get_city
+    city = get_city(args.city)
     if args.cmd == "data":
-        data.build(args.force)
+        from .data import build
+        build(city, force_download=args.force)
     elif args.cmd == "train":
-        model.train(data.load())
-    elif args.cmd == "backtest":
-        rows = schedule.score(model.load_model(), schedule.pool(data.load(), args.start, args.days))
-        summary, _ = schedule.backtest(rows, args.days)
-        print(f"window {args.start} + {args.days} days: {summary.attrs['inspections']:,} routine inspections, "
-              f"{summary.attrs['fails']:,} failed")
-        print(summary.to_string(formatters={"days_sooner": "{:+.1f}".format, "fails_in_first_half": "{:.0%}".format}))
+        from .data import load
+        from .model import train
+        train(load(city), city)
+    elif args.cmd == "evaluate":
+        from .evaluation import run
+        run(city, quick=args.quick)
+    elif args.cmd == "plan":
+        from .planning import print_plan
+        print_plan(city, args.date, args.out)
+    elif args.cmd == "users":
+        from .store import Store
+        Store(city).seed_demo()
+    elif args.cmd == "demo":
+        from .demo import seed
+        seed(city, days=args.days)
+
+
+if __name__ == "__main__":
+    main()

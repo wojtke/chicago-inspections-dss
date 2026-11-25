@@ -1,72 +1,77 @@
 # Project plan
 
-## What the course asks for
+## What the course asks for (LeON, checked 12.11.2026)
 
-From the lecturer's organisation slides (Z0) and the course rules, 2026/27:
+| Task | Points | What we hand in | Due |
+|---|---|---|---|
+| **Z1** | 30 | Analysis of the decision problem + assumptions of the system architecture | **14.12** (LeON: 15.12, 00:00) |
+| **Z2** | 30 | Choice of methods and tools + implementation of the prototype | **20.12** (LeON: 21.12, 00:00) |
+| **Z3** | 40 | Presentation and defence of the project | **20.12** (LeON: 21.12, 00:00) |
 
-- Teams of 2–3 people. The project is defended individually.
-- Five tasks, 100 points in total, a pass from 51 points:
-  - **Z1** analysis of the decision problem
-  - **Z2** system architecture
-  - **Z3** choice of methods and tools
-  - **Z4** prototype
-  - **Z5** presentation, given in two parts
-- Grades: 51–60 → 3.0, 61–70 → 3.5, 71–80 → 4.0, 81–90 → 4.5, 91–100 → 5.0. Activity in class can raise the grade.
-- Deadlines for the tasks are not published yet.
+- Pass from 51 points. 51–60 → 3.0, 61–70 → 3.5, 71–80 → 4.0, 81–90 → 4.5, 91–100 → 5.0.
+- Teams of 2–3. The defence is individual, so each person must be able to explain their own part.
+- The Z1 and Z2 reports are written in Polish, as PDFs built from the course LaTeX template. Code and README stay in English.
 
-What the introduction slides (Z1) stress:
+## What the product is (pitch v2, 12.11)
 
-- **A DSS is part of a decision process, not just an algorithm:** problem → data, preferences, limits → model → analysis / prediction / optimisation → recommendation → human decision → feedback.
-- **Z1 describes the problem with a fixed checklist:** decision-maker, goal, options, criteria, limits, environment, uncertainty, and what kind of problem it is.
-- **Prediction is not a decision.** A *prediction module* estimates a probability. A *decision module* recommends what to do, using costs, preferences, limits and risk.
-- **Hybrid systems dominate:** ML prediction → optimisation → explanation → human decision.
-- **Methods the lecturer often sees:** scenario analysis, GIS, AHP, ML in Python, scoring.
+A decision support system for a city's food-inspection service, built only from the city's open data:
 
-## Plan per task
+1. **Prediction module.** Our own risk model gives the chance that a routine inspection fails.
+   - Gradient boosting, calibrated (Platt) on 2024, tested on 2025–26.
+   - It does **not** use coordinates, because they can stand in for neighbourhood income (see Fairness).
+2. **Decision module.**
+   - The manager's preferences come from AHP: risk vs who eats there (schools, hospitals) vs time since the last visit.
+   - Constraints: inspectors, mandatory visits after complaints, travel.
+   - It produces daily routes with OR-Tools (a prize-collecting vehicle-routing problem).
+   - Neighbourhood balancing keeps poorer areas from being over-inspected or under-protected.
+3. **Interface.** Two local web apps:
+   - **The product** (`app.py`). One click switches between roles; there are no passwords.
+     - The **manager** plans and approves the day, skips or pins places and sets the AHP priorities. A neighbourhood check flags an unbalanced plan.
+     - The **inspector** sees their route, each place's history and why it is on the list, and records results. Those results feed back into the data.
+   - **The technical report** (`report.py`): replay results, team-size scenarios, fairness audit and model quality. It is kept out of the product.
 
-| Task | What we hand in | Where we are |
+Evaluation replays 60-day windows of 2025–26 against the city's actual order and a random order.
+
+Everything city-specific sits in one `CityConfig` (`src/inspections/cities/chicago.py`), so another city can be plugged in.
+
+## Status
+
+| Part | State |
+|---|---|
+| Data: canonical schema, neighbourhoods, socioeconomic indicators | Done |
+| Risk model with calibration and fairness audit | Done |
+| AHP preferences, priority, reasons in Polish | Done |
+| Live planning (due places, mandatory queue, routes) | Done |
+| Replay: 6 policies × 4 team sizes × 5 windows | Done |
+| Product app: role switch, manager pages, inspector page, results | Done |
+| Technical report app | Done |
+| Product: named team and absences, place card from map/lists, frozen plans, re-inspections after a fail, demo seed (`insp demo`) | Done |
+| Technical report, LaTeX + pgfplots (`docs/tech-report`, PL, title + 7 pages, numbers generated from the results) | Draft; base for Z1 and Z2 |
+| Tests (city-agnostic pipeline, AHP, routing, fairness, store) | Done |
+| Z1 report (PL) | To write; due 14.12 |
+| Z2 report (PL) | To write; due 20.12 |
+| Z3 deck and defence | To prepare; due 20.12 |
+
+## Who owns what (for the defence)
+
+| | Piotrek | Wojtek |
 |---|---|---|
-| **Z1** Decision problem | The checklist filled in for Chicago's inspection planning: [z1-problem.md](z1-problem.md) | First draft |
-| **Z2** Architecture | Diagram and description: data → features → risk model → scheduler → app → inspector → feedback (new results flow back into the data) | Matches the code layout; diagram to draw |
-| **Z3** Methods and tools | Gradient boosting vs logistic regression for the risk; ranking under daily capacity for the schedule; AHP for preference weights; the replay as the measure; Python, scikit-learn, Streamlit | Risk model and replay done |
-| **Z4** Prototype | The Streamlit app, extended with the next steps below | Base version works |
-| **Z5** Presentation | Part 1: the problem and the city's case. Part 2: our system, the replay results, the limits | — |
+| Owns | Prediction (features, calibration, Model page), evaluation and fairness | Decision module (AHP, constraints, routing), app, architecture |
+| Writes | Z1: problem analysis; Z2: prediction and evaluation methods | Z1: architecture; Z2: decision methods and prototype |
+| Presents | Problem, data, model, fairness | System, live demo, results |
 
-## What the prototype already does
+## Timeline
 
-- Downloads and cleans 316k inspections (2010–2026).
-- Predicts whether a routine inspection fails, from what was known before that day.
-- Ranks the places due and fills each day's capacity.
-- Replays past 60-day windows. The risk-first order finds failing places 4–8 days sooner than the order the city actually used.
-- App with three tabs: daily list and map, replay, model quality.
-
-## Next steps, roughly in order
-
-1. **Mandatory visits first.** Complaints, licence applications and re-inspections must happen. They should use up capacity before the routine list. This is a real constraint for Z1.
-2. **Preferences.** A failing school or daycare matters more than a failing bar. Weight places by type and risk category, and derive the weights with **AHP**. This is the decision-maker's preference, separate from the prediction.
-3. **What-if scenarios.** What if there were 20% fewer inspectors, or a summer surge? Add a capacity multiplier to the replay.
-4. **Inspector areas.** Split the city into areas so each inspector's list is nearby. This is the GIS part.
-5. **Better prediction.** Add the features the city used: weather, nearby sanitation complaints from 311, garbage and burglary reports.
-6. **Fairness check.** Are some neighbourhoods always pushed to the back of the queue?
-
-## Team split, for three people
-
-| Person | Owns | Writes |
-|---|---|---|
-| A | Data, the city's original model and evaluation | Z1, the data part of Z2 |
-| B | Risk model, features, model quality | Z3 |
-| C | Scheduler, constraints, preferences (AHP), app | Z2, Z4 |
-
-Everyone presents their own part, since the defence is individual.
-
-## How we work
-
-- `uv run pytest` before pushing.
-- Data and models are never committed; `insp data` and `insp train` rebuild them.
-- Small pull requests, one topic each.
+| Dates | Work |
+|---|---|
+| 12–18.11 | Code complete (this list). Read lectures 2–4 from LeON. Z1 outline. |
+| 19–30.11 | App polish; Piotrek reviews the prediction and fairness parts |
+| 1–14.12 | Write Z1, review, **submit by 14.12** |
+| 14–20.12 | Write Z2, deck, rehearse the demo, **submit Z2 and Z3 by 20.12** |
 
 ## Open questions
 
-- Task deadlines, and the dates of the two presentation parts.
-- Whether Z1–Z3 are written reports or are discussed in class.
-- The third team member.
+- Inspection frequency by risk category (we assume 182 / 365 / 730 days). Check against the city's food code.
+- How many sanitarians the city really has (we default to 13 in the field, 6 visits each, which matches the ~76 visits a day in the data).
+- The socioeconomic indicators are from 2008–2012, the newest the portal offers per community area.
+- The date of the presentation in class.

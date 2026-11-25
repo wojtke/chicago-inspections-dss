@@ -1,10 +1,10 @@
 import pandas as pd
 
-from inspections.features import build_features, canvass_outcomes
+from inspections.features import build_features, routine_outcomes
 
 
 def test_features_use_only_earlier_inspections(events):
-    f = build_features(events, canvass_outcomes(events)).set_index("inspection_id")
+    f = build_features(events, routine_outcomes(events)).set_index("inspection_id")
     # First ever visit: no history at all.
     assert f.loc[1, "n_past"] == 0 and pd.isna(f.loc[1, "days_since_last"])
     # Visit 4 sees visits 1-3 only: one fail out of three outcomes, one complaint.
@@ -17,12 +17,12 @@ def test_features_use_only_earlier_inspections(events):
 
 
 def test_same_day_inspections_do_not_leak(events):
-    f = build_features(events, canvass_outcomes(events)).set_index("inspection_id")
+    f = build_features(events, routine_outcomes(events)).set_index("inspection_id")
     # The complaint fail on the same day as visit 5 must not count as history.
     assert f.loc[5, "n_past"] == 0 and f.loc[5, "n_past_fails"] == 0
 
 
 def test_snapshot_date_hides_later_visits(events):
-    target = canvass_outcomes(events).query("inspection_id == 4")
+    target = routine_outcomes(events).query("inspection_id == 4")
     f = build_features(events, target, as_of=pd.Timestamp("2020-06-01"))
     assert f["n_past"].item() == 2  # only the two visits in January 2020
